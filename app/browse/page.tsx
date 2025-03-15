@@ -1,97 +1,119 @@
-"use client"
+"use client";
 
-import { useState, useEffect } from "react"
-import { useSearchParams, useRouter } from "next/navigation"
-import { Input } from "@/components/ui/input"
-import { Button } from "@/components/ui/button"
-import { Slider } from "@/components/ui/slider"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Card, CardContent } from "@/components/ui/card"
-import ItemCard from "@/components/item-card"
-import { Filter, Search, Loader2 } from "lucide-react"
-import { useFirestore } from "@/hooks/use-firestore"
-import type { ItemType } from "@/types/item"
+import { useState, useEffect } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Slider } from "@/components/ui/slider";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Card, CardContent } from "@/components/ui/card";
+import ItemCard from "@/components/item-card";
+import { Filter, Search, Loader2 } from "lucide-react";
+import { useFirestore } from "@/hooks/use-firestore";
+import type { ItemType } from "@/types/item";
+import { useAuth } from "@/hooks/use-auth";
 
 export default function BrowsePage() {
-  const [showFilters, setShowFilters] = useState(false)
-  const [priceRange, setPriceRange] = useState([0, 10000])
-  const [items, setItems] = useState<ItemType[]>([])
-  const [isLoading, setIsLoading] = useState(true)
-  const [searchQuery, setSearchQuery] = useState("")
-  const { getItems } = useFirestore()
-  const searchParams = useSearchParams()
-  const router = useRouter()
+  const [showFilters, setShowFilters] = useState(false);
+  const [priceRange, setPriceRange] = useState([0, 10000]);
+  const [items, setItems] = useState<ItemType[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState("");
+  const { getItems } = useFirestore();
+  const { canBrowseAndBuy } = useAuth();
+  const searchParams = useSearchParams();
+  const router = useRouter();
 
   // Get initial filter values from URL
-  const initialCategory = searchParams.get("category") || "all"
-  const initialCondition = searchParams.get("condition") || "all"
-  const initialType = searchParams.get("type") || "all"
+  const initialCategory = searchParams.get("category") || "all";
+  const initialCondition = searchParams.get("condition") || "all";
+  const initialType = searchParams.get("type") || "all";
 
   const [filters, setFilters] = useState({
     category: initialCategory,
     condition: initialCondition,
     type: initialType,
-  })
+  });
+
+  // Check access and redirect if not authorized
+  useEffect(() => {
+    if (!canBrowseAndBuy()) {
+      router.push("/");
+    }
+  }, [canBrowseAndBuy, router]);
 
   // Load items with filters
   useEffect(() => {
     const loadItems = async () => {
-      setIsLoading(true)
+      if (!canBrowseAndBuy()) return;
+
+      setIsLoading(true);
       try {
         const options: any = {
           maxPrice: priceRange[1],
-        }
+        };
 
         if (filters.category !== "all") {
-          options.category = filters.category
+          options.category = filters.category;
         }
 
         if (filters.condition !== "all") {
-          options.condition = filters.condition
+          options.condition = filters.condition;
         }
 
         if (filters.type === "free") {
-          options.isFree = true
+          options.isFree = true;
         }
 
-        const { products } = await getItems(options)
+        const fetchedItems = await getItems(options);
 
         // Apply search filter client-side
-        let filteredItems = products
+        let filteredItems = fetchedItems;
         if (searchQuery) {
-          const query = searchQuery.toLowerCase()
-          filteredItems = products.filter(
+          const query = searchQuery.toLowerCase();
+          filteredItems = fetchedItems.filter(
             (item) =>
               item.title.toLowerCase().includes(query) ||
               item.description?.toLowerCase().includes(query) ||
-              item.category.toLowerCase().includes(query),
-          )
+              item.category.toLowerCase().includes(query)
+          );
         }
 
-        setItems(filteredItems)
+        setItems(filteredItems);
       } catch (error) {
-        console.error("Error loading items:", error)
+        console.error("Error loading items:", error);
+        setItems([]);
       } finally {
-        setIsLoading(false)
+        setIsLoading(false);
       }
-    }
+    };
 
-    loadItems()
-  }, [filters, priceRange, searchQuery, getItems])
+    loadItems();
+  }, [filters, priceRange, searchQuery, getItems, canBrowseAndBuy]);
 
   // Update URL when filters change
   useEffect(() => {
-    const params = new URLSearchParams()
-    if (filters.category !== "all") params.set("category", filters.category)
-    if (filters.condition !== "all") params.set("condition", filters.condition)
-    if (filters.type !== "all") params.set("type", filters.type)
+    const params = new URLSearchParams();
+    if (filters.category !== "all") params.set("category", filters.category);
+    if (filters.condition !== "all") params.set("condition", filters.condition);
+    if (filters.type !== "all") params.set("type", filters.type);
 
-    const newUrl = `/browse${params.toString() ? `?${params.toString()}` : ""}`
-    router.push(newUrl)
-  }, [filters, router])
+    const newUrl = `/browse${params.toString() ? `?${params.toString()}` : ""}`;
+    router.push(newUrl);
+  }, [filters, router]);
 
   const handleApplyFilters = () => {
-    setFilters({ ...filters })
+    setFilters({ ...filters });
+  };
+
+  if (!canBrowseAndBuy()) {
+    return null; // The useEffect will handle the redirect
   }
 
   return (
@@ -100,7 +122,11 @@ export default function BrowsePage() {
 
       <div className="flex flex-col md:flex-row gap-6">
         {/* Filters */}
-        <div className={`w-full md:w-64 space-y-6 ${showFilters ? "block" : "hidden md:block"}`}>
+        <div
+          className={`w-full md:w-64 space-y-6 ${
+            showFilters ? "block" : "hidden md:block"
+          }`}
+        >
           <Card className="glass-card">
             <CardContent className="p-4">
               <div className="space-y-4">
@@ -110,7 +136,9 @@ export default function BrowsePage() {
                   <label className="text-sm">Category</label>
                   <Select
                     value={filters.category}
-                    onValueChange={(value) => setFilters({ ...filters, category: value })}
+                    onValueChange={(value) =>
+                      setFilters({ ...filters, category: value })
+                    }
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="All Categories" />
@@ -146,7 +174,9 @@ export default function BrowsePage() {
                   <label className="text-sm">Condition</label>
                   <Select
                     value={filters.condition}
-                    onValueChange={(value) => setFilters({ ...filters, condition: value })}
+                    onValueChange={(value) =>
+                      setFilters({ ...filters, condition: value })
+                    }
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="All Conditions" />
@@ -163,7 +193,12 @@ export default function BrowsePage() {
 
                 <div className="space-y-2">
                   <label className="text-sm">Item Type</label>
-                  <Select value={filters.type} onValueChange={(value) => setFilters({ ...filters, type: value })}>
+                  <Select
+                    value={filters.type}
+                    onValueChange={(value) =>
+                      setFilters({ ...filters, type: value })
+                    }
+                  >
                     <SelectTrigger>
                       <SelectValue placeholder="All Types" />
                     </SelectTrigger>
@@ -195,7 +230,11 @@ export default function BrowsePage() {
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
             </div>
-            <Button variant="outline" className="md:hidden" onClick={() => setShowFilters(!showFilters)}>
+            <Button
+              variant="outline"
+              className="md:hidden"
+              onClick={() => setShowFilters(!showFilters)}
+            >
               <Filter className="h-4 w-4 mr-2" />
               Filters
             </Button>
@@ -214,12 +253,13 @@ export default function BrowsePage() {
           ) : (
             <Card className="glass-card p-8 text-center">
               <h3 className="text-lg font-medium mb-2">No items found</h3>
-              <p className="text-muted-foreground">Try adjusting your filters or search terms</p>
+              <p className="text-muted-foreground">
+                Try adjusting your filters or search terms
+              </p>
             </Card>
           )}
         </div>
       </div>
     </div>
-  )
+  );
 }
-

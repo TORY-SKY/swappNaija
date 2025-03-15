@@ -1,46 +1,61 @@
-"use client"
+"use client";
 
-import { useState, useEffect } from "react"
-import { useRouter } from "next/navigation"
-import Image from "next/image"
-import { Trash2, ShoppingBag } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { Separator } from "@/components/ui/separator"
-import { useCart } from "@/hooks/use-cart"
-import { useAuth } from "@/hooks/use-auth"
-import { useToast } from "@/hooks/use-toast"
-import AdDisplay from "@/components/ad-display"
-import PaystackCheckout from "@/components/paystack-checkout"
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import Image from "next/image";
+import { Trash2, ShoppingBag } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
+import { useCart } from "@/hooks/use-cart";
+import { useAuth } from "@/hooks/use-auth";
+import { useToast } from "@/hooks/use-toast";
+import AdDisplay from "@/components/ad-display";
+import PaystackCheckout from "@/components/paystack-checkout";
 
 export default function CartPage() {
-  const { cartItems, removeFromCart, clearCart, getCartTotal } = useCart()
-  const { user } = useAuth()
-  const router = useRouter()
-  const { toast } = useToast()
-  const [isCheckingOut, setIsCheckingOut] = useState(false)
+  const { cartItems, removeFromCart, clearCart, getCartTotal } = useCart();
+  const { user, canBrowseAndBuy } = useAuth();
+  const router = useRouter();
+  const { toast } = useToast();
+  const [isCheckingOut, setIsCheckingOut] = useState(false);
 
-  // Redirect to sign in if not authenticated
+  // Redirect if not authenticated or not authorized
   useEffect(() => {
     if (!user) {
-      router.push("/auth/sign-in?redirect=/cart")
+      router.push("/auth/sign-in?redirect=/cart");
+    } else if (!canBrowseAndBuy()) {
+      toast({
+        title: "Access denied",
+        description: "Your account type does not allow purchasing items",
+        variant: "destructive",
+      });
+      router.push("/");
     }
-  }, [user, router])
+  }, [user, canBrowseAndBuy, router, toast]);
 
   const handleRemoveItem = (itemId: string, itemName: string) => {
-    removeFromCart(itemId)
-  }
+    removeFromCart(itemId);
+  };
 
   const handlePaymentSuccess = async (reference: string) => {
-    setIsCheckingOut(true)
+    setIsCheckingOut(true);
 
     try {
       // Create order in Firestore
-      const { getFirestore, collection, addDoc, serverTimestamp } = await import("firebase/firestore")
-      const { getApp } = await import("firebase/app")
+      const { getFirestore, collection, addDoc, serverTimestamp } =
+        await import("firebase/firestore");
+      const { getApp } = await import("firebase/app");
 
-      const app = getApp()
-      const db = getFirestore(app)
+      const app = getApp();
+      const db = getFirestore(app);
 
       const orderData = {
         userId: user?.uid,
@@ -50,42 +65,43 @@ export default function CartPage() {
         paymentReference: reference,
         status: "paid",
         createdAt: serverTimestamp(),
-      }
+      };
 
-      await addDoc(collection(db, "orders"), orderData)
+      await addDoc(collection(db, "orders"), orderData);
 
       toast({
         title: "Order placed successfully!",
         description: `Your order has been placed with reference: ${reference}`,
-      })
+      });
 
-      clearCart()
-      router.push("/profile")
+      clearCart();
+      router.push("/profile");
     } catch (error) {
-      console.error("Error processing order:", error)
+      console.error("Error processing order:", error);
       toast({
         title: "Error",
-        description: "There was an error processing your order. Please contact support.",
+        description:
+          "There was an error processing your order. Please contact support.",
         variant: "destructive",
-      })
+      });
     } finally {
-      setIsCheckingOut(false)
+      setIsCheckingOut(false);
     }
-  }
+  };
 
   const handlePaymentCancel = () => {
     toast({
       title: "Payment cancelled",
       description: "You have cancelled the payment process.",
-    })
-  }
+    });
+  };
 
-  const subtotal = getCartTotal()
-  const shippingFee = cartItems.length > 0 ? 1500 : 0
-  const total = subtotal + shippingFee
+  const subtotal = getCartTotal();
+  const shippingFee = cartItems.length > 0 ? 1500 : 0;
+  const total = subtotal + shippingFee;
 
-  if (!user) {
-    return null // Don't render anything while redirecting
+  if (!user || !canBrowseAndBuy()) {
+    return null; // Don't render anything while redirecting
   }
 
   return (
@@ -101,7 +117,9 @@ export default function CartPage() {
                 <div className="flex flex-col sm:flex-row">
                   <div className="relative h-40 sm:h-auto sm:w-40 flex-shrink-0">
                     <Image
-                      src={item.imageUrl || "/placeholder.svg?height=200&width=200"}
+                      src={
+                        item.imageUrl || "/placeholder.svg?height=200&width=200"
+                      }
                       alt={item.title}
                       fill
                       className="object-cover"
@@ -110,12 +128,19 @@ export default function CartPage() {
                   <div className="p-4 flex flex-col flex-grow">
                     <div className="flex justify-between">
                       <h3 className="font-semibold text-lg">{item.title}</h3>
-                      <span className="font-bold">{item.isFree ? "FREE" : `₦${item.price.toLocaleString()}`}</span>
+                      <span className="font-bold">
+                        {item.isFree
+                          ? "FREE"
+                          : `₦${item.price.toLocaleString()}`}
+                      </span>
                     </div>
                     <div className="text-sm text-muted-foreground mt-1">
-                      <span>{item.condition}</span> • <span>{item.category}</span>
+                      <span>{item.condition}</span> •{" "}
+                      <span>{item.category}</span>
                     </div>
-                    <div className="text-sm text-muted-foreground mt-1">Location: {item.location}</div>
+                    <div className="text-sm text-muted-foreground mt-1">
+                      Location: {item.location}
+                    </div>
                     <div className="mt-auto pt-4 flex justify-end">
                       <Button
                         variant="outline"
@@ -136,7 +161,9 @@ export default function CartPage() {
               <CardContent className="pt-6 flex flex-col items-center justify-center text-center space-y-4 py-10">
                 <ShoppingBag className="h-12 w-12 text-muted-foreground" />
                 <CardTitle>Your cart is empty</CardTitle>
-                <CardDescription>Items you add to your cart will appear here.</CardDescription>
+                <CardDescription>
+                  Items you add to your cart will appear here.
+                </CardDescription>
                 <Button asChild>
                   <a href="/browse">Start Shopping</a>
                 </Button>
@@ -183,7 +210,7 @@ export default function CartPage() {
               <CardFooter className="flex flex-col space-y-4">
                 <PaystackCheckout
                   amount={total}
-                  email={user.email}
+                  email={user?.email || ""}
                   onSuccess={handlePaymentSuccess}
                   onCancel={handlePaymentCancel}
                   metadata={{
@@ -191,11 +218,12 @@ export default function CartPage() {
                     order_type: "SwapNaira Purchase",
                   }}
                   className="w-full"
-                  disabled={isCheckingOut}
+                  disabled={isCheckingOut || !user?.email}
                 />
-
                 {isCheckingOut && (
-                  <div className="text-center text-sm text-muted-foreground">Processing your order...</div>
+                  <div className="text-center text-sm text-muted-foreground">
+                    Processing your order...
+                  </div>
                 )}
               </CardFooter>
             </Card>
@@ -213,12 +241,31 @@ export default function CartPage() {
                     height={40}
                     className="object-contain"
                   />
-                  <Image src="/visa.svg" alt="Visa" width={60} height={40} className="object-contain" />
-                  <Image src="/mastercard.svg" alt="Mastercard" width={60} height={40} className="object-contain" />
-                  <Image src="/verve.svg" alt="Verve" width={60} height={40} className="object-contain" />
+                  <Image
+                    src="/visa.svg"
+                    alt="Visa"
+                    width={60}
+                    height={40}
+                    className="object-contain"
+                  />
+                  <Image
+                    src="/mastercard.svg"
+                    alt="Mastercard"
+                    width={60}
+                    height={40}
+                    className="object-contain"
+                  />
+                  <Image
+                    src="/verve.svg"
+                    alt="Verve"
+                    width={60}
+                    height={40}
+                    className="object-contain"
+                  />
                 </div>
                 <p className="text-xs text-muted-foreground mt-4">
-                  Secured by Paystack. All transactions are encrypted and secure.
+                  Secured by Paystack. All transactions are encrypted and
+                  secure.
                 </p>
               </CardContent>
             </Card>
@@ -226,6 +273,5 @@ export default function CartPage() {
         )}
       </div>
     </div>
-  )
+  );
 }
-

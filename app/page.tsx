@@ -7,8 +7,11 @@ import CategoryFilter from "@/components/category-filter";
 import FeaturedItems from "@/components/featured-items";
 import { ArrowRight } from "lucide-react";
 import Link from "next/link";
+import { useAuth } from "@/hooks/use-auth";
 
 const Home = () => {
+  const { canListItems, canBrowseAndBuy } = useAuth();
+
   return (
     <div className="container px-4 py-8 mx-auto space-y-10">
       {/* Hero Section */}
@@ -23,56 +26,66 @@ const Home = () => {
             pre-loved items at great prices.
           </p>
           <div className="flex flex-wrap gap-4 pt-2">
-            <Button size="lg" asChild>
-              <Link href="/browse">Start Browsing</Link>
-            </Button>
-            <Button size="lg" variant="outline" asChild>
-              <Link href="/sell">List an Item</Link>
-            </Button>
+            {canBrowseAndBuy() && (
+              <Button size="lg" asChild>
+                <Link href="/browse">Start Browsing</Link>
+              </Button>
+            )}
+            {canListItems() && (
+              <Button size="lg" variant="outline" asChild>
+                <Link href="/sell">List an Item</Link>
+              </Button>
+            )}
           </div>
         </div>
       </section>
 
       {/* Category Filter */}
-      <section>
-        <div className="flex justify-between items-center mb-6">
-          <h2 className="text-2xl font-semibold">Browse Categories</h2>
-          <Button variant="ghost" size="sm" className="gap-1" asChild>
-            <Link href="/browse">
-              View All <ArrowRight className="h-4 w-4" />
-            </Link>
-          </Button>
-        </div>
-        <CategoryFilter />
-      </section>
+      {canBrowseAndBuy() && (
+        <section>
+          <div className="flex justify-between items-center mb-6">
+            <h2 className="text-2xl font-semibold">Browse Categories</h2>
+            <Button variant="ghost" size="sm" className="gap-1" asChild>
+              <Link href="/browse">
+                View All <ArrowRight className="h-4 w-4" />
+              </Link>
+            </Button>
+          </div>
+          <CategoryFilter />
+        </section>
+      )}
 
       {/* Item Swiper */}
-      <section>
-        <div className="flex justify-between items-center mb-6">
-          <h2 className="text-2xl font-semibold">Discover Items</h2>
-          <Button variant="ghost" size="sm" className="gap-1" asChild>
-            <Link href="/browse">
-              See More <ArrowRight className="h-4 w-4" />
-            </Link>
-          </Button>
-        </div>
-        <Card className="glass-card p-6">
-          <ItemSwiper />
-        </Card>
-      </section>
+      {canBrowseAndBuy() && (
+        <section>
+          <div className="flex justify-between items-center mb-6">
+            <h2 className="text-2xl font-semibold">Discover Items</h2>
+            <Button variant="ghost" size="sm" className="gap-1" asChild>
+              <Link href="/browse">
+                See More <ArrowRight className="h-4 w-4" />
+              </Link>
+            </Button>
+          </div>
+          <Card className="glass-card p-6">
+            <ItemSwiper />
+          </Card>
+        </section>
+      )}
 
       {/* Featured Items */}
-      <section className="space-y-6">
-        <div className="flex justify-between items-center">
-          <h2 className="text-2xl font-semibold">Featured Items</h2>
-          <Button variant="ghost" size="sm" className="gap-1" asChild>
-            <Link href="/browse">
-              View All <ArrowRight className="h-4 w-4" />
-            </Link>
-          </Button>
-        </div>
-        <FeaturedItems />
-      </section>
+      {canBrowseAndBuy() && (
+        <section className="space-y-6">
+          <div className="flex justify-between items-center">
+            <h2 className="text-2xl font-semibold">Featured Items</h2>
+            <Button variant="ghost" size="sm" className="gap-1" asChild>
+              <Link href="/browse">
+                View All <ArrowRight className="h-4 w-4" />
+              </Link>
+            </Button>
+          </div>
+          <FeaturedItems />
+        </section>
+      )}
     </div>
   );
 };

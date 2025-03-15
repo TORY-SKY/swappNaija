@@ -1,22 +1,39 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import Link from "next/link"
-import { usePathname } from "next/navigation"
-import { Home, Search, Package, Heart, ShoppingCart, User, Menu, X, Sun, Moon, LogIn } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { useTheme } from "next-themes"
-import { Sheet, SheetContent, SheetTrigger, SheetClose } from "@/components/ui/sheet"
-import { cn } from "@/lib/utils"
-import { useAuth } from "@/hooks/use-auth"
-import { useCart } from "@/hooks/use-cart"
+import { useState } from "react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import {
+  Home,
+  Search,
+  Package,
+  Heart,
+  ShoppingCart,
+  User,
+  Menu,
+  X,
+  Sun,
+  Moon,
+  LogIn,
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { useTheme } from "next-themes";
+import {
+  Sheet,
+  SheetContent,
+  SheetTrigger,
+  SheetClose,
+} from "@/components/ui/sheet";
+import { cn } from "@/lib/utils";
+import { useAuth } from "@/hooks/use-auth";
+import { useCart } from "@/hooks/use-cart";
 
 export default function Header() {
-  const pathname = usePathname()
-  const { theme, setTheme } = useTheme()
-  const { user } = useAuth()
-  const { cartItems } = useCart()
-  const [isSearchOpen, setIsSearchOpen] = useState(false)
+  const pathname = usePathname();
+  const { theme, setTheme } = useTheme();
+  const { user, canListItems, canBrowseAndBuy } = useAuth();
+  const { cartItems } = useCart();
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
 
   const routes = [
     {
@@ -24,26 +41,32 @@ export default function Header() {
       label: "Home",
       icon: Home,
       active: pathname === "/",
+      show: true,
     },
     {
       href: "/browse",
       label: "Browse",
       icon: Search,
       active: pathname === "/browse",
+      show: canBrowseAndBuy(),
     },
     {
       href: "/sell",
       label: "Sell",
       icon: Package,
       active: pathname === "/sell",
+      show: canListItems(),
     },
     {
       href: "/saved",
       label: "Saved",
       icon: Heart,
       active: pathname === "/saved",
+      show: canBrowseAndBuy(),
     },
-  ]
+  ];
+
+  const visibleRoutes = routes.filter((route) => route.show);
 
   return (
     <header className="sticky top-0 z-50 glass-panel border-b">
@@ -56,13 +79,13 @@ export default function Header() {
 
         {/* Desktop Nav */}
         <nav className="hidden md:flex items-center space-x-6">
-          {routes.map((route) => (
+          {visibleRoutes.map((route) => (
             <Link
               key={route.href}
               href={route.href}
               className={cn(
                 "flex items-center text-sm font-medium transition-colors hover:text-primary",
-                route.active ? "text-primary" : "text-muted-foreground",
+                route.active ? "text-primary" : "text-muted-foreground"
               )}
             >
               {route.label}
@@ -85,17 +108,19 @@ export default function Header() {
           </Button>
 
           {/* Cart */}
-          <Button variant="ghost" size="icon" asChild>
-            <Link href="/cart" className="relative">
-              <ShoppingCart className="h-5 w-5" />
-              {cartItems.length > 0 && (
-                <span className="absolute -top-1 -right-1 h-4 w-4 text-[10px] flex items-center justify-center bg-primary text-primary-foreground rounded-full">
-                  {cartItems.length}
-                </span>
-              )}
-              <span className="sr-only">Cart</span>
-            </Link>
-          </Button>
+          {canBrowseAndBuy() && (
+            <Button variant="ghost" size="icon" asChild>
+              <Link href="/cart" className="relative">
+                <ShoppingCart className="h-5 w-5" />
+                {cartItems.length > 0 && (
+                  <span className="absolute -top-1 -right-1 h-4 w-4 text-[10px] flex items-center justify-center bg-primary text-primary-foreground rounded-full">
+                    {cartItems.length}
+                  </span>
+                )}
+                <span className="sr-only">Cart</span>
+              </Link>
+            </Button>
+          )}
 
           {/* User/Auth */}
           {user ? (
@@ -106,7 +131,12 @@ export default function Header() {
               </Link>
             </Button>
           ) : (
-            <Button variant="ghost" size="sm" asChild className="hidden md:flex">
+            <Button
+              variant="ghost"
+              size="sm"
+              asChild
+              className="hidden md:flex"
+            >
               <Link href="/auth/sign-in">
                 <LogIn className="h-4 w-4 mr-2" />
                 Sign In
@@ -138,13 +168,15 @@ export default function Header() {
                 </div>
 
                 <div className="flex flex-col space-y-3 pt-4">
-                  {routes.map((route) => (
+                  {visibleRoutes.map((route) => (
                     <SheetClose asChild key={route.href}>
                       <Link
                         href={route.href}
                         className={cn(
                           "flex items-center space-x-3 px-2 py-3 text-sm font-medium rounded-md hover:bg-primary/10",
-                          route.active ? "bg-primary/10 text-primary" : "text-muted-foreground",
+                          route.active
+                            ? "bg-primary/10 text-primary"
+                            : "text-muted-foreground"
                         )}
                       >
                         <route.icon className="h-5 w-5" />
@@ -179,7 +211,9 @@ export default function Header() {
 
                   <div
                     className="flex items-center space-x-3 px-2 py-3 text-sm font-medium rounded-md hover:bg-primary/10"
-                    onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+                    onClick={() =>
+                      setTheme(theme === "dark" ? "light" : "dark")
+                    }
                   >
                     {theme === "dark" ? (
                       <>
@@ -200,6 +234,5 @@ export default function Header() {
         </div>
       </div>
     </header>
-  )
+  );
 }
-

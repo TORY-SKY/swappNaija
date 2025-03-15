@@ -90,35 +90,31 @@ export function CartProvider({ children }: { children: ReactNode }) {
   }, [cartItems, user, isLoading])
 
   const addToCart = async (item: ItemType) => {
-    setCartItems((prev) => {
-      const exists = prev.some((cartItem) => cartItem.id === item.id)
-      if (exists) {
-        toast({
-          title: "Item already in cart",
-          description: "This item is already in your cart.",
-        })
-        return prev
-      } else {
-        toast({
-          title: "Item added to cart",
-          description: `${item.title} has been added to your cart.`,
-        })
-        return [...prev, item]
-      }
+    const exists = cartItems.some((cartItem) => cartItem.id === item.id)
+    if (exists) {
+      toast({
+        title: "Item already in cart",
+        description: "This item is already in your cart.",
+      })
+      return
+    }
+    
+    setCartItems((prev) => [...prev, item])
+    toast({
+      title: "Item added to cart",
+      description: `${item.title} has been added to your cart.`,
     })
   }
 
   const removeFromCart = (itemId: string) => {
-    setCartItems((prev) => {
-      const item = prev.find((item) => item.id === itemId)
-      if (item) {
-        toast({
-          title: "Item removed",
-          description: `${item.title} has been removed from your cart.`,
-        })
-      }
-      return prev.filter((item) => item.id !== itemId)
-    })
+    const item = cartItems.find((item) => item.id === itemId)
+    if (item) {
+      setCartItems((prev) => prev.filter((item) => item.id !== itemId))
+      toast({
+        title: "Item removed",
+        description: `${item.title} has been removed from your cart.`,
+      })
+    }
   }
 
   const clearCart = () => {
